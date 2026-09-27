@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Dashboard — DSATM Connect</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #eef2f6; min-height: 100vh; color: #1c2733;
+    }
+    header {
+      background: #0f2a4a; color: #fff; padding: .8rem 1.5rem;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    header .brand { font-weight: 700; letter-spacing: .02em; }
+    header .brand span { color: #c9a227; }
+    header .user { font-size: .85rem; opacity: .85; display: flex; gap: 1rem; align-items: center; }
+    header button {
+      background: transparent; border: 1px solid rgba(255,255,255,.4); color: #fff;
+      padding: .35rem .8rem; border-radius: 6px; cursor: pointer; font-size: .8rem;
+    }
+    .wrap { max-width: 900px; margin: 1.5rem auto; padding: 0 1rem; }
+    .card {
+      background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(16,42,74,.12);
+      padding: 1.25rem 1.5rem; margin-bottom: 1.25rem;
+    }
+    h2 { font-size: 1.05rem; margin-bottom: .75rem; color: #0f2a4a; }
+    .sub { font-size: .82rem; color: #68788a; margin-bottom: 1rem; }
+    .class-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; }
+    .class-card { border: 1px solid #dde5ec; border-radius: 10px; padding: 1rem; }
+    .class-card h3 { font-size: .95rem; color: #0f2a4a; margin-bottom: .5rem; }
+    .pct { font-size: 1.6rem; font-weight: 700; }
+    .pct.ok { color: #137333; }
+    .pct.warn { color: #e37400; }
+    .pct.low { color: #c5221f; }
+    .bar { height: 8px; background: #eef2f6; border-radius: 999px; margin: .5rem 0 .25rem; overflow: hidden; }
+    .bar > div { height: 100%; border-radius: 999px; }
+    .meta { font-size: .78rem; color: #68788a; }
+    table { width: 100%; border-collapse: collapse; font-size: .88rem; margin-top: .35rem; }
+    th, td { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid #edf1f5; }
+    th { font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: #68788a; }
+    .pill { padding: .15rem .55rem; border-radius: 999px; font-size: .72rem; font-weight: 600; }
+    .pill.present { background: #e6f4ea; color: #137333; }
+    .pill.absent { background: #fce8e6; color: #c5221f; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">DSATM <span>Connect</span></div>
+    <div class="user">
+      <span id="user-name"></span>
+      <button id="logout">Sign out</button>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div class="card">
+      <h2>My Attendance</h2>
+      <div class="sub" id="sub-info"></div>
+      <div id="class-cards" class="class-cards"><div class="meta">Loading…</div></div>
+    </div>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    async function api(path, opts = {}) {
+      const res = await fetch(path, opts);
+      if (res.status === 401) { window.location.href = '/'; throw new Error('Please sign in'); }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Request failed');
+      return data;
+    }
+
+    function pctColor(p) {
+      if (p >= 85) return 'ok';
+      if (p >= 75) return 'warn';
+      return 'low';
+    }
+    function barColor(p) {
+      if (p >= 85) return '#137333';
+      if (p >= 75) return '#e37400';
+      return '#c5221f';
+    }
+
+    async function init() {
+      const me = await api('/api/me');
+      $('user-name').textContent = `${me.name} — ${me.usn}`;
+
+      const data = await api('/api/my-attendance');
+      const container = $('class-cards');
+      container.innerHTML = '';
+      const classNames = Object.keys(data.classes);
+      $('sub-info').textContent = classNames.length
+        ? 'Attendance percentage per class (85% is the typical requirement)'
+        : 'No attendance records yet.';
+
+      for (const name of classNames) {
+        const c = data.classes[name];
+        const total = c.present + c.absent;
+        const pct = total ? Math.round((c.present / total) * 1000) / 10 : 0;
+        const recent = c.records.slice(-8).reverse();
+        const card = document.createElement('div');
+        card.className = 'class-card';
+        card.innerHTML = `
+          <h3>${name}</h3>
+          <div class="pct ${pctColor(pct)}">${pct}%</div>
+          <div class="bar"><div style="width:${pct}%;background:${barColor(pct)}"></div></div>
+          <div class="meta">${c.present} present · ${c.absent} absent</div>
+          <table>
+            <thead><tr><th>Date</th><th>Status</th></tr></thead>
+            <tbody>
+              ${recent.map((r) => `
+                <tr>
+                  <td>${r.date}</td>
+                  <td><span class="pill ${r.status}">${r.status}</span></td>
+                </tr>`).join('')}
+            </tbody>
+          </table>`;
+        container.appendChild(card);
+      }
+    }
+
+    $('logout').addEventListener('click', async () => {
+      await fetch('/api/logout', { method: 'POST' });
+      window.location.href = '/';
+    });
+
+    init().catch((err) => { console.error(err); });
+  </script>
+</body>
+</html>

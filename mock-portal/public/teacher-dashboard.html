@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Faculty Dashboard — DSATM Connect</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #eef2f6; min-height: 100vh; color: #1c2733;
+    }
+    header {
+      background: #0f2a4a; color: #fff; padding: .8rem 1.5rem;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    header .brand { font-weight: 700; letter-spacing: .02em; }
+    header .brand span { color: #c9a227; }
+    header .user { font-size: .85rem; opacity: .85; display: flex; gap: 1rem; align-items: center; }
+    header button {
+      background: transparent; border: 1px solid rgba(255,255,255,.4); color: #fff;
+      padding: .35rem .8rem; border-radius: 6px; cursor: pointer; font-size: .8rem;
+    }
+    .wrap { max-width: 900px; margin: 1.5rem auto; padding: 0 1rem; }
+    .card {
+      background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(16,42,74,.12);
+      padding: 1.25rem 1.5rem; margin-bottom: 1.25rem;
+    }
+    h2 { font-size: 1.05rem; margin-bottom: .75rem; color: #0f2a4a; }
+    .class-list { display: grid; gap: .6rem; }
+    .class-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: .7rem 1rem; border: 1px solid #dde5ec; border-radius: 8px;
+      cursor: pointer; transition: border-color .15s, background .15s;
+    }
+    .class-item:hover { border-color: #1a4a7a; background: #f6f9fc; }
+    .class-item .meta { font-size: .8rem; color: #68788a; }
+    .grid-controls { display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; }
+    .grid-controls input[type="date"] {
+      padding: .4rem .6rem; border: 1px solid #ccd5de; border-radius: 6px; font-size: .9rem;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+    th, td { text-align: left; padding: .55rem .75rem; border-bottom: 1px solid #edf1f5; }
+    th { font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; color: #68788a; }
+    tr:hover td { background: #f6f9fc; }
+    .pill { padding: .2rem .6rem; border-radius: 999px; font-size: .75rem; font-weight: 600; }
+    .pill.present { background: #e6f4ea; color: #137333; }
+    .pill.absent { background: #fce8e6; color: #c5221f; }
+    .pill.none { background: #f1f3f4; color: #80868b; }
+    .status-select { padding: .3rem .5rem; border-radius: 6px; border: 1px solid #ccd5de; font-size: .85rem; }
+    .actions { display: flex; gap: .75rem; align-items: center; }
+    .btn {
+      padding: .55rem 1.1rem; border: 0; border-radius: 8px; font-weight: 600;
+      cursor: pointer; font-size: .9rem;
+    }
+    .btn-primary { background: #1a4a7a; color: #fff; }
+    .btn-primary:hover { background: #0f2a4a; }
+    .btn-ghost { background: #eef2f6; color: #1c2733; }
+    .toast {
+      position: fixed; bottom: 1.25rem; right: 1.25rem; background: #137333; color: #fff;
+      padding: .7rem 1.1rem; border-radius: 8px; font-size: .88rem; display: none;
+      box-shadow: 0 8px 24px rgba(0,0,0,.25);
+    }
+    .toast.error { background: #c5221f; }
+    #loadBanner {
+      display: none; background: #e8f0fe; color: #174ea6; border: 1px solid #d2e3fc;
+      padding: .5rem .9rem; border-radius: 8px; font-size: .82rem; margin-bottom: .9rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">DSATM <span>Connect</span></div>
+    <div class="user">
+      <span id="user-name"></span>
+      <button id="logout">Sign out</button>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div class="card">
+      <h2>My Classes</h2>
+      <div id="class-list" class="class-list"><div class="meta">Loading…</div></div>
+    </div>
+
+    <div class="card" id="grid-card" style="display:none">
+      <h2 id="grid-title">Attendance</h2>
+      <div id="loadBanner">Attendance for this date is being updated automatically…</div>
+      <div class="grid-controls">
+        <label for="date">Date:</label>
+        <input type="date" id="date" />
+        <button class="btn btn-ghost" id="load">Load</button>
+      </div>
+      <table>
+        <thead>
+          <tr><th>USN</th><th>Student</th><th>Recorded</th><th>Mark</th></tr>
+        </thead>
+        <tbody id="student-rows"></tbody>
+      </table>
+      <div class="actions" style="margin-top:1rem">
+        <button class="btn btn-primary" id="save">Save attendance</button>
+        <span class="meta" id="dirty-info" style="color:#68788a;font-size:.82rem"></span>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let currentClass = null;
+
+    function toast(msg, isError = false) {
+      const t = $('toast');
+      t.textContent = msg;
+      t.className = 'toast' + (isError ? ' error' : '');
+      t.style.display = 'block';
+      setTimeout(() => { t.style.display = 'none'; }, 3200);
+    }
+
+    async function api(path, opts = {}) {
+      const res = await fetch(path, opts);
+      if (res.status === 401) { window.location.href = '/'; throw new Error('Please sign in'); }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Request failed');
+      return data;
+    }
+
+    // Detect an automated Playwright session via URL hash: #class=<id>&date=<date>&auto=1
+    function automationParams() {
+      const h = new URLSearchParams(location.hash.slice(1));
+      if (h.get('auto') !== '1') return null;
+      return { classId: h.get('class'), date: h.get('date') };
+    }
+
+    async function init() {
+      const me = await api('/api/me');
+      $('user-name').textContent = `${me.name} (Faculty)`;
+
+      const classes = await api('/api/classes');
+      const list = $('class-list');
+      list.innerHTML = '';
+      if (!classes.length) {
+        list.innerHTML = '<div class="meta">No classes assigned.</div>';
+        return;
+      }
+      for (const c of classes) {
+        const el = document.createElement('div');
+        el.className = 'class-item';
+        el.dataset.classId = c.id;
+        el.innerHTML = `<div><strong>${c.name}</strong></div><div class="meta">${c.student_count} students</div>`;
+        el.addEventListener('click', () => openGrid(c.id, c.name));
+        list.appendChild(el);
+      }
+
+      const auto = automationParams();
+      if (auto) {
+        $('loadBanner').style.display = 'block';
+        const cls = classes.find((c) => String(c.id) === String(auto.classId)) || classes[0];
+        $('date').value = auto.date || new Date().toISOString().slice(0, 10);
+        await openGrid(cls.id, cls.name);
+        const el = [...document.querySelectorAll('.class-item')].find(
+          (n) => String(n.dataset.classId) === String(cls.id)
+        );
+        if (el) el.style.background = '#e8f0fe';
+      }
+    }
+
+    async function openGrid(classId, className) {
+      currentClass = { id: classId, name: className };
+      $('grid-card').style.display = 'block';
+      $('grid-title').textContent = `Attendance — ${className}`;
+      if (!$('date').value) $('date').value = new Date().toISOString().slice(0, 10);
+      await loadGrid();
+    }
+
+    async function loadGrid() {
+      if (!currentClass) return;
+      const data = await api(`/api/classes/${currentClass.id}/students?date=${$('date').value}`);
+      const tbody = $('student-rows');
+      tbody.innerHTML = '';
+      for (const s of data.students) {
+        const tr = document.createElement('tr');
+        tr.dataset.usn = s.usn;
+        const status = s.status || 'none';
+        tr.innerHTML = `
+          <td>${s.usn}</td>
+          <td>${s.name}</td>
+          <td><span class="pill ${status}">${status === 'none' ? 'not marked' : status}</span></td>
+          <td>
+            <select class="status-select" data-usn="${s.usn}" data-id="${s.id}">
+              <option value="" ${status === 'none' ? 'selected' : ''}>— not marked —</option>
+              <option value="present" ${status === 'present' ? 'selected' : ''}>Present</option>
+              <option value="absent" ${status === 'absent' ? 'selected' : ''}>Absent</option>
+            </select>
+          </td>`;
+        tbody.appendChild(tr);
+      }
+    }
+
+    $('load').addEventListener('click', loadGrid);
+
+    $('save').addEventListener('click', async () => {
+      if (!currentClass) return;
+      const statuses = {};
+      document.querySelectorAll('.status-select').forEach((sel) => {
+        statuses[sel.dataset.id] = sel.value; // server keys by numeric student id
+      });
+      try {
+        const res = await api(`/api/classes/${currentClass.id}/attendance`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date: $('date').value, statuses }),
+        });
+        toast(`Saved ${res.marked} records for ${res.date}`);
+        await loadGrid();
+      } catch (err) { toast(err.message, true); }
+    });
+
+    $('logout').addEventListener('click', async () => {
+      await fetch('/api/logout', { method: 'POST' });
+      window.location.href = '/';
+    });
+
+    init().catch((err) => { console.error(err); });
+  </script>
+</body>
+</html>

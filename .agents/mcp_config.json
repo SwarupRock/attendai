@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "attendai-teacher": {
+      "command": "node",
+      "args": ["D:\\MCP college\\mcp-server\\index.js"],
+      "env": {
+        "ATTENDAI_USER": "teacher:anil.kumar"
+      }
+    },
+    "attendai-student": {
+      "command": "node",
+      "args": ["D:\\MCP college\\mcp-server\\index.js"],
+      "env": {
+        "ATTENDAI_USER": "student:1DS22CD001"
+      }
+    }
+  }
+}

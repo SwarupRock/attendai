@@ -1,0 +1,14 @@
+{
+  "name": "attendai-mock-portal",
+  "version": "1.0.0",
+  "description": "Fake college portal (Express + SQLite) used by AttendAI as a safe demo target",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "seed": "node db/seed.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.4.1",
+    "express": "^5.1.0"
+  }
+}

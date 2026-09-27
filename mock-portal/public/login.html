@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DSATM Connect — Student Portal</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, #0f2a4a 0%, #1a4a7a 55%, #2a6aa0 100%);
+      padding: 1rem;
+    }
+    .login-card {
+      background: #fff; border-radius: 12px; overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,.35);
+      width: 100%; max-width: 380px;
+    }
+    .login-header {
+      background: #0f2a4a; color: #fff; padding: 1.75rem 2rem; text-align: center;
+    }
+    .login-header .crest {
+      width: 44px; height: 44px; margin: 0 auto .5rem; border-radius: 50%;
+      background: #c9a227; color: #0f2a4a; font-weight: 800; font-size: 1.15rem;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .login-header h1 { font-size: 1.15rem; letter-spacing: .03em; }
+    .login-header p { font-size: .78rem; opacity: .75; margin-top: .25rem; }
+    .login-body { padding: 1.75rem 2rem 2rem; }
+    label { display: block; font-size: .8rem; color: #555; margin-bottom: .3rem; font-weight: 600; }
+    input {
+      width: 100%; padding: .65rem .8rem; margin-bottom: 1rem;
+      border: 1px solid #ccd5de; border-radius: 8px; font-size: .95rem;
+    }
+    input:focus { outline: 2px solid #1a4a7a; border-color: transparent; }
+    button {
+      width: 100%; padding: .7rem; border: 0; border-radius: 8px;
+      background: #1a4a7a; color: #fff; font-size: .95rem; font-weight: 600;
+      cursor: pointer; transition: background .15s;
+    }
+    button:hover { background: #0f2a4a; }
+    .error {
+      background: #fdecea; color: #b3261e; border: 1px solid #f5c6c2;
+      border-radius: 8px; padding: .55rem .75rem; font-size: .82rem;
+      margin-bottom: 1rem; display: none;
+    }
+    .hint {
+      margin-top: 1.25rem; padding-top: 1rem; border-top: 1px dashed #d8dee5;
+      font-size: .72rem; color: #8a95a1; line-height: 1.5;
+    }
+    .hint code { background: #f0f3f7; padding: 1px 5px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <div class="login-header">
+      <div class="crest">DS</div>
+      <h1>DSATM Connect</h1>
+      <p>Student &amp; Faculty Portal — Demo Environment</p>
+    </div>
+    <div class="login-body">
+      <div id="error" class="error"></div>
+      <form id="login-form">
+        <label for="username">Username</label>
+        <input id="username" name="username" autocomplete="username" required />
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required />
+        <button type="submit">Sign in</button>
+      </form>
+      <div class="hint">
+        <strong>Demo logins (fake data):</strong><br />
+        Teacher: <code>anil.kumar</code> / <code>teacher123</code><br />
+        Student: <code>1ds22cd001</code> / <code>student123</code>
+      </div>
+    </div>
+  </div>
+  <script>
+    const errBox = document.getElementById('error');
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errBox.style.display = 'none';
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: document.getElementById('username').value,
+            password: document.getElementById('password').value,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Login failed');
+        window.location.href = data.redirect;
+      } catch (err) {
+        errBox.textContent = err.message;
+        errBox.style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>

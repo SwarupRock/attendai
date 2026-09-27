@@ -1,0 +1,13 @@
+{
+  "name": "attendai-automation",
+  "version": "1.0.0",
+  "description": "Playwright browser automation for the AttendAI MOCK portal only (hard rule: localhost targets only)",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "demo": "node markAttendanceViaBrowser.js"
+  },
+  "dependencies": {
+    "playwright-core": "^1.55.0"
+  }
+}

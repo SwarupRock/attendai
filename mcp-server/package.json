@@ -1,0 +1,19 @@
+{
+  "name": "attendai-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server exposing attendance tools over the Model Context Protocol",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "selftest": "node test/selftest.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "^2.0.0",
+    "better-sqlite3": "^12.4.1",
+    "zod": "^4.1.11"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/client": "^2.1.0"
+  }
+}
